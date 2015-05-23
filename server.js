@@ -6,8 +6,16 @@ var getFromApi = function(endpoint, args) {
   var emitter = new events.EventEmitter();
   unirest.get('https://api.spotify.com/v1/' + endpoint)
          .qs(args)
+         //Request.end sends the request
          .end(function(response) {
-           emitter.emit('end', response.body);
+           var artist = response.body.artists.items[0];
+           unirest.get('https://api.spotify.com/v1/artists/' + 
+                       artist.id + 
+                       '/related-artists')
+                  .end(function(res) {
+                    artist.related = res.body.artists;
+                    emitter.emit('end', artist);
+                  })
          });
   return emitter;
 };
@@ -23,8 +31,7 @@ app.get('/search/:name', function(req, res) {
   });
   
   searchReq.on('end', function(item) {
-    var artist = item.artists.items[0];
-    res.json(artist);
+    res.json(item);
   });
   
   searchReq.on('error', function() {
